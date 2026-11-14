@@ -217,16 +217,20 @@ DWORD GetModuleFileNameA(HMODULE m, LPSTR out, DWORD cap) { (void)m; return (DWO
     (tmp / "main.c").write_text(r'''#include <stdarg.h>
 #include <stdint.h>
 #include <stdio.h>
+#include <stdlib.h>
 void hos_log(const char *f, ...) { va_list ap; va_start(ap, f); printf("log: "); vprintf(f, ap); printf("\n"); va_end(ap); }
 int hos_binding(int set, int button, int slot) { (void)set; (void)button; (void)slot; return -1; }
 int hos_sdl_pads(uint64_t *buttons, int32_t stick[4]) { (void)buttons; (void)stick; return 0; }
 void hos_sdl_pad_first_name(char *out, size_t cap) { if (cap) *out = 0; }
 int hos_regions(uint64_t (*out)[2], int cap) { (void)out; (void)cap; return 0; }
 int64_t hos_now_ns(void) { return 0; }
+int hos_xinput_pads(void) { return 0; }
+const char *hos_romfs_dir = 0;
 int rx_option(int id, int otherwise) { (void)id; return otherwise; }
 void hos_mods_init(const char *image_path);
 int hos_mods_romfs(const char *rel, char *out, size_t cap);
 int main(int argc, char **argv) {
+    hos_romfs_dir = getenv("TEST_ROMFS");
     hos_mods_init(NULL);
     for (int i = 1; i < argc; i++) {
         char out[4096] = "";
@@ -248,6 +252,8 @@ int main(int argc, char **argv) {
         top = tmp / name
         game = top / "game"
         (game / "prompts/xbox").mkdir(parents=True)
+        (game / "System/Resource").mkdir(parents=True)
+        (game / "System/Resource" / TABLE.rsplit("/", 1)[1]).write_bytes(b"")   # (the RomFS table's name: game_table)
         (game / "hookshot_options.ini").write_text("button_prompts=2\n")   # (Xbox: no controller asked for)
         (game / "prompts/External.bfotf").write_bytes(struct.pack("<I", 0x18029A7F) + bytes(28))   # (every face's: one font)
         if ours is not None:
@@ -257,7 +263,7 @@ int main(int argc, char **argv) {
             for rel, data in files.items():
                 (top / "mods" / folder / "romfs" / rel).parent.mkdir(parents=True, exist_ok=True)
                 (top / "mods" / folder / "romfs" / rel).write_bytes(data)
-        env = dict(os.environ, TEST_GAME_EXE=str(game / "hookshot"), HOS_MODS=str(top / "mods"))
+        env = dict(os.environ, TEST_GAME_EXE=str(game / "hookshot"), TEST_ROMFS=str(game), HOS_MODS=str(top / "mods"))
         out = subprocess.run([str(exe), *opens], env=env, check=True, capture_output=True, text=True, timeout=60).stdout
         served = {}
         for line in out.splitlines():

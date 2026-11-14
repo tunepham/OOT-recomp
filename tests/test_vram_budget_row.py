@@ -180,8 +180,8 @@ int main() {
         cpp = Path(tmp) / "fixture.cpp"
         exe = Path(tmp) / "fixture"
         cpp.write_text(fixture, encoding="utf-8")
-        built = subprocess.run([a.cxx, "-std=c++20", "-Wall", "-Wextra", "-Werror", str(cpp), "-o", str(exe)],
-                               capture_output=True, text=True)
+        built = subprocess.run([a.cxx, "-std=c++20", "-Wall", "-Wextra", "-Werror", "-D_CRT_SECURE_NO_WARNINGS", str(cpp),
+                                "-o", str(exe)], capture_output=True, text=True)
         if built.returncode:
             fail.append("the fixture does not build:\n" + built.stderr[-1500:])
         else:

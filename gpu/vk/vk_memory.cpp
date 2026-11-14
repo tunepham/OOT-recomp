@@ -859,7 +859,7 @@ uint64_t cap_free_bytes = 0;   // (cap_free_mu)
 // ones, 40-60 MB each, stayed as spares for good: up to 768 MB of host memory on a card over 6.5 GB. A few are enough;
 // capture_spares::max_bytes says how many)
 uint64_t cap_spare_max() {
-    static const uint64_t v = [] {
+    static const uint64_t v = []() -> uint64_t {
         if (const char* e = getenv("RX_VK_CAP_SPARE_MB")) return e[0] && atoll(e) ? (uint64_t)atoll(e) << 20 : ~0ull;
         uint64_t used = 0, allowed = 0;
         return capture_spares::max_bytes(vram_usage(&used, &allowed), allowed);
