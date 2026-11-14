@@ -47,7 +47,10 @@ enum { B_A = 0, B_B, B_X, B_Y, B_LS, B_RS, B_L, B_R, B_ZL, B_ZR, B_PLUS, B_MINUS
 #define ATTR_CONNECTED 1u
 
 typedef DWORD(WINAPI *XInputGetStateFn)(DWORD, XINPUT_STATE *);
+typedef DWORD(WINAPI *XInputSetStateFn)(DWORD, XINPUT_VIBRATION *);
 static XInputGetStateFn xinput_get;
+static XInputSetStateFn xinput_set;
+static volatile LONG xinput_pad = -1;   /* (the XInput pad when SDL cannot send the rumble: its motors get it) */
 static int64_t sampling;
 
 int rx_option(int id, int otherwise);
@@ -673,6 +676,9 @@ int32_t hos_stick_axis(int16_t v, int zone) {
     return (a > t || a < -t) ? a : 0;
 }
 
+static volatile int xinput_pads_now;   /* (pads_read: the controllers XInput has, while it is polled) */
+int hos_xinput_pads(void) { return xinput_pads_now; }   /* (host/prompts.c: Auto's face) */
+
 static void pads_read(uint64_t *buttons, int32_t stick[4]) {
     static int64_t next_read, retry[XUSER_MAX_COUNT];
     static int was_connected[XUSER_MAX_COUNT];
@@ -699,12 +705,17 @@ static void pads_read(uint64_t *buttons, int32_t stick[4]) {
 #ifdef __EMSCRIPTEN__
     xinput_get = XInputGetState;
 #endif
-    /* Polling XInput alongside SDL causes double-reads and conflicting button mappings when Steam Input
+    /* Polling XInput for input alongside SDL causes double-reads and conflicting button mappings when Steam Input
        or controller wrappers emulate an XInput controller for a pad SDL is already reading (#1480, #1583).
-       Only poll XInput when SDL has no open controllers, unless HOS_XINPUT=1 is explicitly requested. */
+       Input comes from XInput only when SDL has no open controllers, unless HOS_XINPUT=1 is explicitly requested.
+       XInput is also polled for rumble when SDL has no pad, or when its pad refused the motor send. */
     static int poll_xinput_env = -1;
     if (poll_xinput_env < 0) poll_xinput_env = env_on("HOS_XINPUT");
-    if (!sdl_pads || poll_xinput_env) {
+    int hos_sdl_rumble_failed(void);   /* pad_sdl.c */
+    const int xinput_input = !sdl_pads || poll_xinput_env;
+    const int xinput_rumble = !sdl_pads || hos_sdl_rumble_failed();
+    if (xinput_input || xinput_rumble) {
+        xinput_pads_now = 0;
         if (!xinput_get) {
             static int64_t load_retry;
             if (now >= load_retry) {
@@ -716,9 +727,13 @@ static void pads_read(uint64_t *buttons, int32_t stick[4]) {
                 HMODULE x = LoadLibraryA("xinput1_4.dll");
                 if (!x) x = LoadLibraryA("xinput9_1_0.dll");
 #endif
-                if (x) xinput_get = (XInputGetStateFn)GetProcAddress(x, "XInputGetState");
+                if (x) {
+                    xinput_get = (XInputGetStateFn)GetProcAddress(x, "XInputGetState");
+                    xinput_set = (XInputSetStateFn)GetProcAddress(x, "XInputSetState");
+                }
             }
         }
+        int xinput_here = -1;
         static const struct { WORD x; int b; } map[] = {
             {XINPUT_GAMEPAD_A, HOS_PAD_SOUTH}, {XINPUT_GAMEPAD_B, HOS_PAD_EAST}, {XINPUT_GAMEPAD_X, HOS_PAD_WEST},
             {XINPUT_GAMEPAD_Y, HOS_PAD_NORTH}, {XINPUT_GAMEPAD_LEFT_THUMB, HOS_PAD_LSTICK},
@@ -738,20 +753,28 @@ static void pads_read(uint64_t *buttons, int32_t stick[4]) {
             }
             if (!was_connected[p]) hos_log("hid: controller %d connected", p);
             was_connected[p] = 1;
-            const WORD w = xs.Gamepad.wButtons;
-            for (unsigned i = 0; i < sizeof map / sizeof *map; i++)
-                if (w & map[i].x) raw |= 1ULL << map[i].b;
-            if (xs.Gamepad.bLeftTrigger > 64) raw |= 1ULL << HOS_PAD_LTRIGGER;
-            if (xs.Gamepad.bRightTrigger > 64) raw |= 1ULL << HOS_PAD_RTRIGGER;
-            const int16_t thumb[4] = {xs.Gamepad.sThumbLX, xs.Gamepad.sThumbLY, xs.Gamepad.sThumbRX, xs.Gamepad.sThumbRY};
-            int32_t v[4];
-            int rx_option(int id, int otherwise);
-            const int zone = rx_option(11, 0);   /* (the menu's Stick dead zone) */
-            for (int i = 0; i < 4; i++) v[i] = hos_stick_axis(thumb[i], zone);
-            if (rx_option(16, 0)) v[2] = -v[2];
-            if (rx_option(17, 0)) v[3] = -v[3];
-            stick_max(s, v);
+            xinput_pads_now = 1;
+            xinput_here = p;
+            if (xinput_input) {
+                const WORD w = xs.Gamepad.wButtons;
+                for (unsigned i = 0; i < sizeof map / sizeof *map; i++)
+                    if (w & map[i].x) raw |= 1ULL << map[i].b;
+                if (xs.Gamepad.bLeftTrigger > 64) raw |= 1ULL << HOS_PAD_LTRIGGER;
+                if (xs.Gamepad.bRightTrigger > 64) raw |= 1ULL << HOS_PAD_RTRIGGER;
+                const int16_t thumb[4] = {xs.Gamepad.sThumbLX, xs.Gamepad.sThumbLY, xs.Gamepad.sThumbRX, xs.Gamepad.sThumbRY};
+                int32_t v[4];
+                int rx_option(int id, int otherwise);
+                const int zone = rx_option(11, 0);   /* (the menu's Stick dead zone) */
+                for (int i = 0; i < 4; i++) v[i] = hos_stick_axis(thumb[i], zone);
+                if (rx_option(16, 0)) v[2] = -v[2];
+                if (rx_option(17, 0)) v[3] = -v[3];
+                stick_max(s, v);
+            }
         }
+        InterlockedExchange(&xinput_pad, xinput_rumble ? xinput_here : -1);
+    } else {
+        xinput_pads_now = 0;
+        InterlockedExchange(&xinput_pad, -1);
     }
     InterlockedExchange(&pad_raw_now, (LONG)raw);
     /* Back and Start together open the Insert menu (gpu/vk/vk_menu.cpp, for pads whose Home button the system
@@ -1158,8 +1181,31 @@ static void vibration_send(uint64_t handle, uint64_t value) {
     }
     void hos_sdl_rumble_hd(int side, const float value[4]);   /* pad_sdl.c: the value as it is, for HD rumble */
     hos_sdl_rumble_hd(dev, v);
+    const float heavy = amp[0][0] > amp[1][0] ? amp[0][0] : amp[1][0];
+    const float light = amp[0][1] > amp[1][1] ? amp[0][1] : amp[1][1];
     void hos_sdl_rumble(float low, float high);   /* pad_sdl.c */
-    hos_sdl_rumble(amp[0][0] > amp[1][0] ? amp[0][0] : amp[1][0], amp[0][1] > amp[1][1] ? amp[0][1] : amp[1][1]);
+    hos_sdl_rumble(heavy, light);
+    /* (SDL absent, or its pad refused the motor rumble: an Xbox pad's XInput handles take it instead, with the same
+       Rumble strength scaling the SDL pads use) */
+    const int pad = (int)__atomic_load_n(&xinput_pad, __ATOMIC_RELAXED);
+    if (pad >= 0 && xinput_set) {
+        uint16_t motors[2];
+        void hos_sdl_rumble_motors(uint16_t out[2]);   /* pad_sdl.c */
+        hos_sdl_rumble_motors(motors);
+        static int sent_pad = -1, logged;
+        static uint16_t sent_heavy, sent_light;
+        if (pad != sent_pad || motors[0] != sent_heavy || motors[1] != sent_light) {
+            XINPUT_VIBRATION xv;
+            memset(&xv, 0, sizeof xv);
+            xv.wLeftMotorSpeed = motors[0];
+            xv.wRightMotorSpeed = motors[1];
+            if (xinput_set((DWORD)pad, &xv) == ERROR_SUCCESS) {
+                sent_pad = pad, sent_heavy = motors[0], sent_light = motors[1];
+                if ((motors[0] || motors[1]) && !logged)
+                    hos_log("hid: XInput rumble on controller %d", pad), logged = 1;
+            }
+        }
+    }
 }
 static void vibration_value_idle(uint64_t v) {   /* VibrationValue {f32 amp_low, freq_low, amp_high, freq_high} */
     float idle[4] = {0.0f, 160.0f, 0.0f, 320.0f};

@@ -32,11 +32,8 @@ enum { HOS_OPT_VOLUME = 27, HOS_OPT_MUTE_BACKGROUND };
    the game is told its display is HDR10 (the swapchain is one), and the peak and paper white it is told, in nits */
 /* (HOS_OPT_DISCORD, 43: the Insert menu's Discord status row, host/discord_rpc.c: 1 on) */
 enum { HOS_OPT_HDR_NATIVE = 40, HOS_OPT_HDR_PEAK, HOS_OPT_HDR_WHITE, HOS_OPT_DISCORD };
-/* (HOS_OPT_DISABLE_CAMERA_CENTERING, 45: Controls' movement-follow yaw, host/mouse_native.c: 0 stock, 1 disabled;
-   44 is reserved for HOS_OPT_SKIP_TITLE) */
-enum { HOS_OPT_DISABLE_CAMERA_CENTERING = 45 };
 /* (hookshot) the Insert menu's Camera speed: the right stick's camera turn in percent of the game's, 50 to 400 (host/nn_vi.c
-   hos_camera_scale, nx2/oot_patches.py). 48: after the HDR and Discord rows' 40 to 43, Skip title's 44 and camera centering's 45 */
+   hos_camera_scale, nx2/oot_patches.py). 48: after the HDR and Discord rows' 40 to 43 and Skip title's 44 */
 enum { HOS_OPT_CAMERA_SPEED = 48 };
 /* (HOS_OPT_PROMPTS, 46: the Button prompts row, host/prompts.c: 0 Auto, else HOS_PROMPT_* + 1; a change shows at once) */
 enum { HOS_OPT_PROMPTS = 46 };
@@ -47,6 +44,9 @@ enum { HOS_OPT_HDR_TONEMAP = 47 };
 /* Gameplay's vertical field of view, percent of the game's current angle; 100 is unchanged. */
 /* 49 and 50 are reserved for Walk mode and Walk speed (#2345). */
 enum { HOS_OPT_FOV = 51 };
+/* (HOS_OPT_PAD_LAYOUT, 52: the Controls page's Layout preset, host/prompts.c: 0 Nintendo, 1 Xbox / PC, 2 Swap Face,
+   3 Custom. Auto button prompts use it until a controller's name is known.) */
+enum { HOS_OPT_PAD_LAYOUT = 52 };
 
 /* (hookshot) the controls' names (host/nn_hid.c, host/pad_sdl.c, the pad_ and key_ lines of hookshot_options.ini):
    the Switch's buttons in nn::hid's bit order, and a gamepad's inputs by position (the bottom face button first:
@@ -64,9 +64,9 @@ enum { HOS_PAD_ART_N = HOS_PAD_RTRIGGER + 1 };
    gpu/vk/vk_menu.cpp): its own bit past HOS_PAD_N, so it is not one of the inputs the Controls page binds */
 enum { HOS_PAD_TOUCHPAD = 31 };
 enum { HOS_BIND_PAD, HOS_BIND_KEY };
-/* (hookshot) the controller faces of the button prompts (host/prompts.c): the Switch, then nx2/prompt_faces.py FACES' order;
-   the Button prompts row's value is one more (0 Auto) */
-enum { HOS_PROMPT_SWITCH, HOS_PROMPT_XBOX, HOS_PROMPT_PS4, HOS_PROMPT_PS5, HOS_PROMPT_STEAMDECK, HOS_PROMPT_N };
+/* (hookshot) the controller faces of the button prompts (host/prompts.c): the Switch, then nx2/prompt_faces.py FACES' order,
+   then the keyboard's (nx2/prompt_keys.py); the Button prompts row's value is one more (0 Auto) */
+enum { HOS_PROMPT_SWITCH, HOS_PROMPT_XBOX, HOS_PROMPT_PS4, HOS_PROMPT_PS5, HOS_PROMPT_STEAMDECK, HOS_PROMPT_KEYBOARD, HOS_PROMPT_N };
 /* (hookshot) what of the button prompts follows a new face or new controls at once (MkwVkHost.prompts_live, a bit each):
    the textures (the ocarina's notes, the Talk ring's letters, the System page's controller), the layouts (the Talk ring's
    places, the ocarina hint's spacing), the icons in texts; the rest at the next start */

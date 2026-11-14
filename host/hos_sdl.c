@@ -616,9 +616,10 @@ int32_t hos_sdl_pad_id(void *pad) {
     return version == 3 ? (int32_t)CALL(uint32_t (*)(void *), GetGamepadID)(pad)
                         : CALL(int32_t (*)(void *), JoystickInstanceID)(CALL(void *(*)(void *), GetJoystick)(pad));
 }
-void hos_sdl_pad_rumble(void *pad, uint16_t low, uint16_t high, uint32_t ms) {
-    if (version == 3) CALL(_Bool (*)(void *, uint16_t, uint16_t, uint32_t), PadRumble)(pad, low, high, ms);
-    else CALL(int (*)(void *, uint16_t, uint16_t, uint32_t), PadRumble)(pad, low, high, ms);
+int hos_sdl_pad_rumble(void *pad, uint16_t low, uint16_t high, uint32_t ms) {
+    if (!f.PadRumble) return 0;
+    if (version == 3) return CALL(_Bool (*)(void *, uint16_t, uint16_t, uint32_t), PadRumble)(pad, low, high, ms) ? 1 : 0;
+    return CALL(int (*)(void *, uint16_t, uint16_t, uint32_t), PadRumble)(pad, low, high, ms) == 0;   /* (SDL2: 0 is success) */
 }
 int hos_sdl_pad_type(void *pad) { return f.PadType ? CALL(int (*)(void *), PadType)(pad) : 0; }
 int hos_sdl_pad_has_effect(void) { return f.PadEffect != NULL; }

@@ -8,8 +8,8 @@ what it is made from, or draw it by hand and put it here.
 
 | Image | What it is | Made from |
 | --- | --- | --- |
-| `OcarinaButton<A B X Y L R>_00.<pad input>.png` | the ocarina's notes: the note of that Switch button when it is on that pad input | the face's icon for the pad input (`icons` in `nx2/prompt_faces.py`, a glyph of the face's Kenney font) |
-| `KeyTexFont<A B X Y>_00.<pad input>.png` | the white letters on black (the Talk ring's small buttons) | the icon's letter (its holes), or its shape when it has none |
+| `OcarinaButton<A B X Y L R>_00.<pad input>.png` | the ocarina's notes: the note of that Switch button when it is on that pad input (an Xbox A B X Y keeps its own letter on every pad input) | the face's icon for the pad input (`icons` in `nx2/prompt_faces.py`, a glyph of the face's Kenney font), or the button's own letter (`art`) |
+| `KeyTexFont<A B X Y>_00.<pad input>.png` | the white letters on black (the Talk ring's small buttons; an Xbox A B X Y keeps its own letter on every pad input) | the icon's letter (its holes), or its shape when it has none |
 | `Controller_Pro.png` | the controller in the pause menu's controls page (System) | the face's `drawing` in `nx2/prompt_faces.py`, drawn by `nx2/prompt_draw.py` |
 | `Controller_Pro1.png`, `ControllerSh_Pro1.png` | the page's tinted copy of the controller, and its shadow | `Controller_Pro.png` (yours if you made one) |
 | `ControllerGuide_Pro_0<0 1>.png` | the page's leader lines that stay, whatever the controls | the face's `parts` in `nx2/prompt_faces.py` (where each control is in the picture) and the router in `prompt_assets.py` (`GUIDE_*`) |

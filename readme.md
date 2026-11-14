@@ -44,25 +44,26 @@ Discord: https://discord.gg/rexed
 
 ## Project status
 
-Experimental. Most testing so far has been around the start of the game. Players have reported on many PCs since:
-the table says what works and what does not yet.
+Experimental. Players have now played from Kokiri Forest through Hyrule Field, Castle Town, Kakariko, and the dungeons on many PCs. The table says what works and what does not yet. The latest release is
+[2.1.0](https://github.com/NotRexed/Hookshot/releases/tag/v2.1.0), 11 November 2026.
 
 | What | Status |
 |---|---|
-| Kokiri Forest: reaching gameplay and walking around | ✅ Works |
+| Kokiri Forest and the Great Deku Tree | ✅ Works |
 | Sound, controller, keyboard and saves | ✅ Works |
-| In-game menu, frame generation and upscaling | ✅ Works |
+| In-game menu, audio controls, frame generation and upscaling | ✅ Works |
+| Field of view, text size, button prompts and bug reports | ✅ Works |
 | Flicker (the picture flashing too bright while moving) | ✅ Fixed in v2.0.2 ([#645](https://github.com/NotRexed/Hookshot/pull/645)) |
 | Ground fog vanishing when looking down | ✅ Fixed in v2.0.2 ([#638](https://github.com/NotRexed/Hookshot/pull/638)) |
 | Models with missing pieces (doors, fences, parts of trees) | ✅ Fixed where tested, more play needed |
 | Stutter when entering new areas | ⚠️ Still happens the first time you visit a place. The next visits are smooth |
 | Performance | ⚠️ Depends on the PC: some reach a steady 60 fps, others stay below it, more so in Hyrule Field |
-| Hyrule Field, Castle Town, Kakariko and the dungeons | ⚠️ Players got there, with open bugs: striped shadows in Hyrule Field ([#468](https://github.com/NotRexed/Hookshot/issues/468)), some crashes ([#317](https://github.com/NotRexed/Hookshot/issues/317), [#648](https://github.com/NotRexed/Hookshot/issues/648)) |
-| Ultrawide and 4:3 | ⚠️ The 3D keeps its shape, but the HUD is stretched and the picture is softer |
+| Hyrule Field, Castle Town, Kakariko, the dungeons and the adult areas | ⚠️ Playable, with open bugs: striped shadows in Hyrule Field ([#468](https://github.com/NotRexed/Hookshot/issues/468)), some crashes ([#317](https://github.com/NotRexed/Hookshot/issues/317), [#648](https://github.com/NotRexed/Hookshot/issues/648)) and some adult-area textures not loading |
+| 4:3 and ultrawide | ⚠️ Works with **Aspect ratio**: the 3D takes the monitor's shape and the HUD and movies stay in the middle 16:9. **Ultrawide menus** fills the sides or keeps the game's menus centred; a picture wider than 16:9 is capped at 5120x2160's pixels |
 | NVIDIA cards | ✅ Works. The most tested |
 | AMD cards | ⚠️ Some tested: reports from the RX 6600, RX 7800 XT and RX 7900 XTX. Known issue: the game loses the GPU in the Deku Tree on the RX 6600 ([#708](https://github.com/NotRexed/Hookshot/issues/708), [#614](https://github.com/NotRexed/Hookshot/issues/614)) |
 | Intel cards | ❓ Few reports, many of them black screens or crashes ([#17](https://github.com/NotRexed/Hookshot/issues/17)) |
-| Cards without mesh shaders (such as AMD RX 5000 and older) | ❌ Not supported: parts of the picture are missing. Since v2.0.6 a fallback runs the mesh programs as compute shaders on cards with buffer device addresses ([#640](https://github.com/NotRexed/Hookshot/issues/640)); it leaves out the mesh draws that take their count from a buffer |
+| Cards without mesh shaders (such as AMD RX 5000 and older) | ❌ Not supported: parts of the picture are missing. Since v2.0.6 a fallback runs the mesh programs as compute shaders on cards with buffer device addresses ([#640](https://github.com/NotRexed/Hookshot/issues/640)); **Mesh shaders → Compute** forces it, but it leaves out the mesh draws that take their count from a buffer |
 | Linux | ✅ Works with the AppImage. Tested on several distributions (CachyOS, Fedora, Bazzite, SteamOS) and cards, with open problems on some AMD cards ([#604](https://github.com/NotRexed/Hookshot/issues/604), [#528](https://github.com/NotRexed/Hookshot/issues/528)) |
 
 ## Install and play
@@ -308,6 +309,7 @@ HDR, Detail, and GPU and memory (last: the rows to change when something is wron
 | | V-Sync | Auto, On, Off | Auto |
 | | Window scaling filter | Off, Catmull-Rom, Lanczos | Off |
 | | Aspect ratio | 16:9, Monitor's shape: wider than 16:9, or narrower down to 5:4 (after a restart) | Monitor's shape |
+| | Ultrawide menus | Full width, Centred, blurred sides, Centred, black bars (with Monitor's shape) | Centred, blurred sides |
 | | HDR | Off, Expanded, Native (the game's) | Off |
 | | HDR paper white | 80 to 400 nits (while HDR is on) | 200 nits |
 | | HDR peak brightness | 400 to 4000 nits (while HDR is on) | 1000 nits |
@@ -316,6 +318,7 @@ HDR, Detail, and GPU and memory (last: the rows to change when something is wron
 | | Anisotropic filtering | Game's, 2x, 4x, 8x, 16x | 16x |
 | | GPU device | Auto, or each graphics card by name (after a restart) | Auto |
 | | VRAM budget | Auto, 3.6, 4.8, 6, 7.5, 9, 11 GB (2.2 GB only from the Minimum (4GB) preset); a quality preset sets it | Auto |
+| | Mesh shaders | Automatic, Native, Compute (after a restart) | Automatic |
 | Audio | Volume | 0 to 100%, in steps of 5 | 100% |
 | | Mute in background | Off, On | Off |
 | | Audio output | Auto, Stereo, 5.1 (after a restart) | Auto |
@@ -327,10 +330,10 @@ HDR, Detail, and GPU and memory (last: the rows to change when something is wron
 | | Text speed | Normal, 2x, 4x, Instant | Normal |
 | | Text size | Original, 110%, 125%, 150%, 175% (dialogue, Navi and signs) | Original |
 | | Microphone | Off, Default, or each microphone by name | Default |
+| | Discord status | Off, On | On |
 | | Bug report | Saves a report into a new folder in `bug-reports` (below) | |
 | Controls | Controller in background | Off, On | Off |
 | | Mouse camera | As the stick, Native | As the stick |
-| | Disable camera centering | Off, On | Off |
 | | Mouse sensitivity | 0.10 to 5.00 | 1.00 |
 | | Invert mouse vertical | Off, On | Off |
 | | Invert camera X | Off, On | Off |
@@ -339,6 +342,7 @@ HDR, Detail, and GPU and memory (last: the rows to change when something is wron
 | | Stick dead zone | Default (24%), 5%, 10%, 15%, 20%, 30% | Default (24%) |
 | | Rumble strength | Off, 25% to 150%, in steps of 25 | 100% |
 | | Layout preset | Nintendo (Def), Xbox / PC, Swap Face, Custom | Nintendo (Def) |
+| | Button prompts | Auto, Switch, Xbox, PlayStation 4, PlayStation 5, Steam Deck, Keyboard | Auto |
 | | Motion | Opens the Motion page: Motion controls (Off, On; On), Motion sensitivity X (10% to 600%) and Y (10% to 300%; 100%), Invert motion X and Y (Off, On; Off), Motion deadzone (Low, Standard, High; Standard) | |
 | | Controls | Opens the Controls page | |
 | | Menu shortcut | Insert or F1; F1 only; Insert, F1 or Esc | Insert, F1 or Esc |
@@ -411,12 +415,19 @@ HDR, Detail, and GPU and memory (last: the rows to change when something is wron
   reports a single 16:9 primary monitor. For three 16:9 monitors, use `5760x1080` or `7680x1440` and a window or logical display
   that spans all three. Both render at full size: 7680x1440 has 5120x2160's pixels, the most a wide picture takes.
   For one run, set `HOS_OUTPUT_RES` to a size, such as `HOS_OUTPUT_RES=3840x2160`.
+- **Ultrawide menus:** with **Aspect ratio** at Monitor's shape, keeps the pause, item and map menus in the middle 16:9.
+  **Centred, blurred sides** (the default) shows the game's picture out of focus beside them, **Centred, black bars**
+  leaves those sides black, and **Full width** stretches the menus across the screen as earlier versions did. Loading
+  screens and pre-rendered movies get the same sides.
 - **Window scaling filter** matters only when your window's size differs from the Output resolution: for the sharpest
   picture, set the Output resolution to your screen's, and the row shows "Not needed (window = output)". It and
   **Sharpness** also work when Frame generation is Off.
 - **Anisotropic filtering** keeps textures sharp on surfaces seen at a slant: the paths and floors ahead of Link. The game
   asks for 1x or 2x, which at a PC's resolutions smears the ground a few metres off; 16x costs little on most cards, and
   Game's is the console's own. `RX_VK_ANISO=<n>` sets it for one run (0: the game's).
+- **Mesh shaders:** Automatic uses the GPU's own mesh shaders where the driver has them and the compute fallback where it
+  does not. Native requires the GPU's own; Compute forces the fallback on every GPU. The fallback leaves out the mesh
+  draws whose count comes from a buffer, so parts of the scenery are missing. A change applies after a restart.
 - **Upscaler Off** (`dlss=6` in `hookshot_options.ini`) is for slow GPUs and for measuring: no DLSS, no FSR, and not the
   game's own network either, which otherwise runs on every frame (at the game's usual 3/4 share it scales the 3D up and
   smooths its edges; at 100% a pass of the same kind still smooths them). In its place the 3D is stretched to the output
@@ -468,13 +479,12 @@ HDR, Detail, and GPU and memory (last: the rows to change when something is wron
   once. A chosen microphone that is unplugged stays chosen (shown as not connected): Default stands in until it is
   back. On Linux (SDL2) two microphones with the same name cannot be told apart: the first is used. Windows must allow desktop apps to use the microphone
   (Settings, Privacy & security, Microphone). `HOS_MIC_LOG=1` logs what the game reads, a line a second.
+- **Discord status:** On (the default) shows "Playing Hookshot" and the time played in your Discord status while the
+  Discord client runs on this PC. Off shows nothing. It does not need a Discord login in the game.
 - **Controller in background:** On keeps the controller working while another window has the focus. The keyboard and
   mouse still need the game's window.
 - **Mouse camera:** Native turns the camera with the mouse one to one, as in a PC game. As the stick uses the mouse in
   place of the right stick. The <kbd>-</kbd> and <kbd>=</kbd> keys change the sensitivity in game too.
-- **Disable camera centering:** On stops the game gradually turning the camera toward your movement, so it does not fight
-  native mouse look. Off keeps the game's standard behavior. Changes apply immediately with either Mouse camera mode.
-  Manual controls, explicit recentering and scripted camera headings still work; automatic pitch adjustment is unchanged.
 - **Camera speed** is how fast the right stick turns the camera, in percent of the game's own speed. The camera keys
   follow it, and so does the mouse with Mouse camera on As the stick; Native mouse look has its own sensitivity. The
   game's own camera speed option still picks the speed this multiplies.
@@ -490,7 +500,13 @@ HDR, Detail, and GPU and memory (last: the rows to change when something is wron
   last. The gyroscope's drift is learned while the pad rests on a table, so set it down for a second if the aim
   creeps. `HOS_MOTION_DEBUG=1` (in `hookshot_env.txt`) logs what the game gets twice a second.
 - **Layout preset:** Nintendo has A on the right face button, Xbox / PC and Swap Face put A on the bottom one. Changing
-  a button yourself sets it to Custom.
+  a button yourself sets it to Custom. **Button prompts** changes the artwork only; it does not change the controls' layout.
+  Xbox prompts keep each button's own letter and follow the layout: Nintendo shows A on the right, B at the bottom, X at
+  the top, Y on the left; Xbox / PC shows A at the bottom, B on the right, X on the left, Y at the top.
+- **Button prompts** (on the Controls page): the button icons in the game's texts, hints and menus. Auto shows the first
+  controller's; with no controller connected, the keyboard's when the build made it, else the layout preset's. Keyboard
+  shows the key or mouse button your controls put each action on (the first of its two), and WASD and the mouse for the
+  sticks; the ocarina's notes and the pause menu's controller keep the Switch's buttons.
 - **Save my pipeline list** (Debug tab, under Developer): see [Send your pipeline list](#send-your-pipeline-list).
 
 ### Controls

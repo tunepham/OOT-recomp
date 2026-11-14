@@ -18,6 +18,10 @@
    let through: while the camera's keys or a pad turn it (nn_hid.c, hos_mouse_native_stick), its angles become the mouse's
    new start.
 
+   ZL recenters the camera while it is not the mouse's (state 2, the game's lock-on/recenter). When it returns to 3 or 4,
+   the angles the game chose are the new start too: the old mouse target is dropped while the camera is the game's, or
+   releasing ZL would put the pre-ZL view back on the first frame, undoing the recenter.
+
    The motion is added before the camera reads its input, so the game's own collision, lock-on and scripted cameras still
    follow. The camera is the mouse's only while the game gives it free control: the hook ran within the last 150 ms, the
    camera's state at +0x204 is 3 or 4, and the game holds none of the buttons that take the right stick for its own use
@@ -58,6 +62,8 @@ static volatile LONG stick_held;        /* (nn_hid.c: the camera's keys or a pad
 static uint64_t own_camera;             /* (the camera target_yaw and target_pitch belong to) */
 static float target_yaw, target_pitch;  /* (the mouse's angles: the game's own follow is undone every frame) */
 static int target_ok;
+static int recenter;                    /* (ZL's state 2 was the camera's: its angles are the next free view) */
+static float recenter_yaw, recenter_pitch;
 static long long applied, cameras_seen;
 
 static float getf(uint64_t a) { float f; memcpy(&f, GP(a), 4); return f; }
@@ -115,6 +121,17 @@ void hos_mouse_camera(uint64_t cam) {
     if (state != 3 && state != 4) {
         /* (at once: the stick takes the next motion, not one burst once the 150 ms run out) */
         InterlockedExchange64(&last_hook_ns, 0);
+        /* ZL recenters in state 2: keep the angles it chose. The game may put its old view back as it leaves the
+           state, so the angles at the next free frame are not enough: the last recentered ones are. Other states
+           (a menu, another view) have no recenter to keep. */
+        if (state == 2) {
+            recenter_yaw = getf(cam + YAW_AT);
+            recenter_pitch = getf(cam + PITCH_AT);
+            recenter = 1;
+        } else {
+            recenter = 0;   /* (a menu, another view: no ZL view to put back) */
+        }
+        target_ok = 0;
         /* (each state seen leaving the mouse to the stick, once: what another view, Z-targeting, climbing or swimming,
            is, to add here if one of them should turn with the mouse) */
         static uint32_t said[8];
@@ -135,11 +152,20 @@ void hos_mouse_camera(uint64_t cam) {
     }
     if (InterlockedExchange64(&last_camera, (LONG64)cam) != (LONG64)cam && cameras_seen++ < 8)
         hos_log("mouse native: the player camera at %#llx turns with the mouse", (unsigned long long)cam);
-    /* (a new camera, or one the game's own stick turned: its angles now are where the mouse starts from) */
+    /* (a new camera, or one the game's own stick turned: its angles now are where the mouse starts from; after ZL,
+       the angles it recentered to, not the old view the game may have put back on the way out of state 2) */
     if (!target_ok || own_camera != cam || stick_held) {
+        const int same_camera = own_camera == cam;
         own_camera = cam;
-        target_yaw = getf(cam + YAW_AT);
-        target_pitch = getf(cam + PITCH_AT);
+        if (recenter && same_camera && !stick_held) {
+            target_yaw = recenter_yaw;
+            target_pitch = recenter_pitch;
+            recenter = 0;
+        } else {
+            recenter = 0;
+            target_yaw = getf(cam + YAW_AT);
+            target_pitch = getf(cam + PITCH_AT);
+        }
         target_ok = 1;
     }
     int32_t dx, dy;

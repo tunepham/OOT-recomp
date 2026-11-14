@@ -11,7 +11,8 @@ own right stick is let through (hos_mouse_native_stick: the camera's keys, a pad
 start. Without the menu's Mouse camera (option 6), or on an object that is not a camera, it does nothing. The game gives
 the camera free control only in its states 3 (it follows Link, the right stick takes it over) and 4 (the player's), and
 while no button it takes the right stick for is held (ZR, the bow's aim; L, the item wheel; R: hos_mouse_native_free);
-150 ms without the camera (the pause menu, another camera) give the motion back to the stick as well.
+150 ms without the camera (the pause menu, another camera) give the motion back to the stick as well. A recenter while
+the game has the camera (ZL, state 2) is the new mouse start when it comes back: the pre-ZL target is not restored.
 python -I -B tests/test_mouse_native.py   (Linux: host/posix's windows.h)
 """
 import shutil
@@ -145,6 +146,19 @@ int main(void) {
     CHECK(move_x == 10 && near(getf(YAW), 0.0f));   /* (a lock-on, a menu, first person: the right stick's) */
     CHECK(hos_mouse_native() == -1);
     move_x = 0;
+    /* ZL: the game recenters while the mouse is not the camera's (state 2). Releasing it must keep the new view, not
+       put the old mouse target back on the first free frame. */
+    seed_at(10, 30);
+    puti(CAM + 0x204, 2);
+    putf(YAW, -60), putf(PITCH, 20);
+    frame(0, 0);
+    CHECK(near(getf(YAW), -60.0f) && near(getf(PITCH), 20.0f));
+    puti(CAM + 0x204, 3);
+    putf(YAW, 30), putf(PITCH, 10);   /* (the game puts the old view back on the way out of state 2) */
+    frame(0, 0);
+    CHECK(near(getf(YAW), -60.0f) && near(getf(PITCH), 20.0f));   /* the recentered view, not 30/10 */
+    frame(10, 0);
+    CHECK(near(getf(YAW), -61.0f));   /* and the mouse turns from there */
     puti(CAM + 0x204, 3);
     /* a button the game takes the stick for (ZR, the bow's aim; L, the item wheel; R): the game's camera too */
     hos_mouse_native_free(0);

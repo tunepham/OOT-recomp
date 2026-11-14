@@ -129,7 +129,7 @@ def check_lift_sources():
     check("the lift's scripts import (%s)" % run.stderr.strip()[-2000:], run.returncode == 0)
     out = run.stdout
     tops = (str(ROOT / "nx2") + os.sep, str(ROOT / "third_party" / "a64-kit") + os.sep)
-    loaded = {f for f in out.split() if f.startswith(tops)}
+    loaded = {f for f in out.splitlines() if f.startswith(tops)}
     check("the lift loads its modules (%d)" % len(loaded), len(loaded) > 12 and str(ROOT / "nx2" / "chunks.py") in loaded)
     sources = {os.path.abspath(f) for f in make_game.lift_sources()}
     missing = sorted(loaded - sources)

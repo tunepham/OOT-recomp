@@ -40,6 +40,7 @@
 #endif
 #include "shaders/wb_diff_comp_spv.h"
 #include "vram_pressure.h"
+#include "capture_spares.h"
 #ifndef HOOKSHOT_ENV_H   // (env_on: the switches' one rule)
 #include "hookshot_env.h"
 #endif
@@ -854,13 +855,14 @@ bool sync_live() {
 }
 std::mutex cap_free_mu;   // (the submitting threads take buffers from cap_free, the replay gives them back)
 uint64_t cap_free_bytes = 0;   // (cap_free_mu)
-// (the spare buffers: 12 and, on a card of 6 GB or less, 32 MB of them; RX_VK_CAP_SPARE_MB=<n>: that many, 0: as before.
-// After a load the retired ones, 40-60 MB each, stayed as spares for good)
+// (the spare buffers: 12 and a byte budget; RX_VK_CAP_SPARE_MB=<n>: n MB, 0: unbounded, as before. After a load the retired
+// ones, 40-60 MB each, stayed as spares for good: up to 768 MB of host memory on a card over 6.5 GB. A few are enough;
+// capture_spares::max_bytes says how many)
 uint64_t cap_spare_max() {
     static const uint64_t v = [] {
         if (const char* e = getenv("RX_VK_CAP_SPARE_MB")) return e[0] && atoll(e) ? (uint64_t)atoll(e) << 20 : ~0ull;
         uint64_t used = 0, allowed = 0;
-        return vram_usage(&used, &allowed) && allowed <= (6ull << 30) + (512ull << 20) ? 32ull << 20 : ~0ull;
+        return capture_spares::max_bytes(vram_usage(&used, &allowed), allowed);
     }();
     return v;
 }
@@ -1736,11 +1738,17 @@ bool take_capture(std::unique_ptr<Capture> c, uint64_t value, uint64_t completed
         st_tk_stamp += std::chrono::duration<double, std::milli>(tk1 - tk_locked).count();
         st_tk_all += std::chrono::duration<double, std::milli>(tk2 - tk0).count();
         if (++n % 600 == 0) {
+            size_t spares;
+            uint64_t spare_bytes;
+            {
+                std::lock_guard lk(cap_free_mu);
+                spares = cap_free.size(), spare_bytes = cap_free_bytes;
+            }
             logf("vk: a capture taken (ms): all %.3f; GPU wait for late pages %.3f (%lld of 600 takes), pools lock %.3f, retires "
-                 "and stamps %.3f, bytes copied %.3f; %zu kept (%llu MB), %zu spare buffers, %zu texture pages copied (%llu MB)",
+                 "and stamps %.3f, bytes copied %.3f; %zu kept (%llu MB), %zu spare buffers (%llu MB), %zu texture pages copied (%llu MB)",
                  st_tk_all / 600, st_tk_late / 600, (long long)st_tk_late_n, st_tk_lock / 600, st_tk_stamp / 600, st_tk_copy / 600,
-                 cap_bufs.size(), (unsigned long long)(cap_bytes >> 20), cap_free.size(), shadow_n.load(std::memory_order_relaxed),
-                 (unsigned long long)(shadow_n.load(std::memory_order_relaxed) >> 8));
+                 cap_bufs.size(), (unsigned long long)(cap_bytes >> 20), spares, (unsigned long long)(spare_bytes >> 20),
+                 shadow_n.load(std::memory_order_relaxed), (unsigned long long)(shadow_n.load(std::memory_order_relaxed) >> 8));
             st_tk_all = st_tk_stamp = st_tk_copy = st_tk_late = st_tk_lock = 0, st_tk_late_n = 0;
         }
     }

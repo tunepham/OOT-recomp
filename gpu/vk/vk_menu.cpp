@@ -480,7 +480,8 @@ const char* tx_text_size(int v) {
 const char* tx_fov(int v) { return v == 100 ? "100% (original)" : tx_percent(v); }
 const char* tx_ultrawide(int v) { return v ? "Monitor's shape" : "16:9"; }   // (the Aspect ratio row: a shape, not on or off)
 const char* tx_prompts(int v) {
-    static const char* t[HOS_PROMPT_N + 1] = {"Auto", "Switch", "Xbox", "PlayStation 4", "PlayStation 5", "Steam Deck"};
+    static const char* t[HOS_PROMPT_N + 1] = {"Auto", "Switch", "Xbox", "PlayStation 4", "PlayStation 5", "Steam Deck",
+                                              "Keyboard"};
     return t[std::min(std::max(v, 0), (int)HOS_PROMPT_N)];
 }
 const char* tx_gpu(int v) {
@@ -896,14 +897,11 @@ Row rows[] = {
      "Shows \"Playing Hookshot\" and the time played in your Discord status, while Discord runs on this PC.", nullptr, false,
      true},
 
-    // Controls (12 rows; Motion opens the 6 TAB_MOTION rows, Controls its page with the 2 TAB_PAGE rows)
+    // Controls (11 rows; Motion opens the 6 TAB_MOTION rows, Controls its page with the 2 TAB_PAGE rows)
     {TAB_CONTROLS, "Controller in background", &opts.pad_background, 0, 1, 1, tx_onoff,
      "Whether the controller plays the game while another window has the focus.", hn_background, false, true},
     {TAB_CONTROLS, "Mouse camera", &opts.mouse_native, 0, 1, 1, tx_mousecam, "How the captured mouse turns the camera.",
      hn_mousecam, false, true},
-    {TAB_CONTROLS, "Disable camera centering", &opts.disable_camera_centering, 0, 1, 1, tx_onoff,
-     "Stops the camera gradually turning toward the direction you move, useful with native mouse look. Off keeps the "
-     "game's standard behavior. Manual camera controls and recentering still work.", nullptr, false, true},
     {TAB_CONTROLS, "Mouse sensitivity", &opts.mouse_sens, 10, 500, 10, tx_sens,
      "How far the camera turns for a mouse movement, with either Mouse camera: at 1.00 native look turns 0.1 degree a "
      "count. The - and = keys change it in game too.", nullptr, false, true},
@@ -1357,34 +1355,28 @@ const char* tx_pad_layout(int v) {
     static const char* t[] = {"Nintendo (Def)", "Xbox / PC", "Swap Face", "Custom"};
     return t[std::min(std::max(v, 0), 3)];
 }
+// (the face buttons in HOS_SW_A's order, and each preset's input for them: Nintendo, Xbox / PC, Swap Face)
+const int kPadFaceButtons[4] = {HOS_SW_A, HOS_SW_B, HOS_SW_X, HOS_SW_Y};
+const int kPadLayoutFaces[3][4] = {
+    {HOS_PAD_EAST, HOS_PAD_SOUTH, HOS_PAD_NORTH, HOS_PAD_WEST},
+    {HOS_PAD_SOUTH, HOS_PAD_EAST, HOS_PAD_WEST, HOS_PAD_NORTH},
+    {HOS_PAD_SOUTH, HOS_PAD_EAST, HOS_PAD_NORTH, HOS_PAD_WEST},
+};
 void apply_pad_layout(int layout) {
-    if (!can_bind()) return;
-    if (layout == 0) { // Nintendo (Default: Bottom=B, Right=A, Top=X, Left=Y)
-        host->bind(HOS_BIND_PAD, HOS_SW_A, 0, HOS_PAD_EAST);
-        host->bind(HOS_BIND_PAD, HOS_SW_B, 0, HOS_PAD_SOUTH);
-        host->bind(HOS_BIND_PAD, HOS_SW_X, 0, HOS_PAD_NORTH);
-        host->bind(HOS_BIND_PAD, HOS_SW_Y, 0, HOS_PAD_WEST);
-    } else if (layout == 1) { // Xbox / PC Standard (Bottom=A, Right=B, Left=X, Top=Y)
-        host->bind(HOS_BIND_PAD, HOS_SW_A, 0, HOS_PAD_SOUTH);
-        host->bind(HOS_BIND_PAD, HOS_SW_B, 0, HOS_PAD_EAST);
-        host->bind(HOS_BIND_PAD, HOS_SW_X, 0, HOS_PAD_WEST);
-        host->bind(HOS_BIND_PAD, HOS_SW_Y, 0, HOS_PAD_NORTH);
-    } else if (layout == 2) { // Swap Face Buttons (Bottom=A, Right=B, Top=X, Left=Y)
-        host->bind(HOS_BIND_PAD, HOS_SW_A, 0, HOS_PAD_SOUTH);
-        host->bind(HOS_BIND_PAD, HOS_SW_B, 0, HOS_PAD_EAST);
-        host->bind(HOS_BIND_PAD, HOS_SW_X, 0, HOS_PAD_NORTH);
-        host->bind(HOS_BIND_PAD, HOS_SW_Y, 0, HOS_PAD_WEST);
-    }
+    if (!can_bind() || layout < 0 || layout >= 3) return;
+    // (clear both inputs first: a preset is the face buttons' whole mapping, so a custom binding cannot survive in an
+    // Input 2 or trade places with one of the preset's inputs partway through)
+    for (int b = 0; b < 4; b++)
+        for (int slot = 0; slot < 2; slot++) host->bind(HOS_BIND_PAD, kPadFaceButtons[b], slot, -1);
+    for (int b = 0; b < 4; b++) host->bind(HOS_BIND_PAD, kPadFaceButtons[b], 0, kPadLayoutFaces[layout][b]);
 }
 int detect_pad_layout() {
     if (!can_bind()) return opts.pad_layout;
-    const int a = host->binding(HOS_BIND_PAD, HOS_SW_A, 0);
-    const int b = host->binding(HOS_BIND_PAD, HOS_SW_B, 0);
-    const int x = host->binding(HOS_BIND_PAD, HOS_SW_X, 0);
-    const int y = host->binding(HOS_BIND_PAD, HOS_SW_Y, 0);
-    if (a == HOS_PAD_EAST && b == HOS_PAD_SOUTH && x == HOS_PAD_NORTH && y == HOS_PAD_WEST) return 0;
-    if (a == HOS_PAD_SOUTH && b == HOS_PAD_EAST && x == HOS_PAD_WEST && y == HOS_PAD_NORTH) return 1;
-    if (a == HOS_PAD_SOUTH && b == HOS_PAD_EAST && x == HOS_PAD_NORTH && y == HOS_PAD_WEST) return 2;
+    for (int layout = 0; layout < 3; layout++) {
+        int b = 0;
+        while (b < 4 && host->binding(HOS_BIND_PAD, kPadFaceButtons[b], 0) == kPadLayoutFaces[layout][b]) b++;
+        if (b == 4) return layout;
+    }
     return 3;
 }
 // (hookshot) the row's choice to the host: off, the default, or a microphone by its name (and its place in the host's list,
@@ -1965,7 +1957,7 @@ const char* pad_name(int p) {
     if (p < 0 || p >= HOS_PAD_N) return "None";
     static const char* paddles[] = {"R4", "L4", "R5", "L5"};
     if (p >= HOS_PAD_RPADDLE1) return paddles[p - HOS_PAD_RPADDLE1];
-    static const char* t[HOS_PROMPT_N + 1][HOS_PAD_RPADDLE1] = {   // (by place, then HOS_PROMPT_*)
+    static const char* t[HOS_PROMPT_KEYBOARD + 1][HOS_PAD_RPADDLE1] = {   // (by place, then HOS_PROMPT_*; the keyboard's: by place)
         {"Bottom button", "Right button", "Left button", "Top button", "Select / Back", "Home", "Start", "L stick press",
          "R stick press", "L1 / LB", "R1 / RB", "D-pad up", "D-pad down", "D-pad left", "D-pad right", "L2 / LT", "R2 / RT"},
         {"B", "A", "Y", "X", "Minus", "Home", "Plus", "L stick press", "R stick press", "L", "R", "D-pad up",
@@ -1979,7 +1971,7 @@ const char* pad_name(int p) {
         {"A", "B", "X", "Y", "View", "Steam", "Menu", "L3", "R3", "L1", "R1", "D-pad up", "D-pad down", "D-pad left",
          "D-pad right", "L2", "R2"}};
     const int face = opts.prompts ? opts.prompts - 1 : host && host->prompt_face ? host->prompt_face() : -1;
-    return t[face >= 0 && face < HOS_PROMPT_N ? face + 1 : 0][p];
+    return t[face >= 0 && face < HOS_PROMPT_KEYBOARD ? face + 1 : 0][p];
 }
 const char* key_name(int vk) {
     static char b[16];
@@ -3681,6 +3673,10 @@ void menu_init() {
         env_override(&opts.output_res, parse_output(e));
     }
     restart_init();   // (what this run started with: the rows that take a restart differ from it once changed)
+    // (a saved layout whose controls are still the default: apply it. A hand-made binding keeps the controls as they are,
+    // as host/nn_hid.c read them; a saved layout must not overwrite a custom mapping at the start)
+    if (can_bind() && (opts.pad_layout == 1 || opts.pad_layout == 2) && detect_pad_layout() == 0)
+        apply_pad_layout(opts.pad_layout);
 }
 
 /// (hookshot) The first start (no options file yet), once the card is chosen: the Quality preset for its memory, so an older or

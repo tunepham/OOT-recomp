@@ -45,6 +45,7 @@ static struct {
     int32_t id;
     uint16_t rumble_lo, rumble_hi;
     int64_t rumble_ns;
+    volatile uint8_t rumble_bad;   /* SDL refused the last motor send: nn_hid.c's XInput fallback takes over */
     uint8_t hd, hd_kind, hd_ever;   /* HD rumble (hd_rumble.h): HD_RUMBLE_UNKNOWN / ON / OFF, the pad's kind, sent once */
     uint8_t hd_sent[HD_RUMBLE_PACKET_SIZE];
     int64_t hd_ns;
@@ -343,6 +344,7 @@ static void pads_poll(void) {
                     pads[i].gc = NULL;
                     pads[i].rumble_lo = pads[i].rumble_hi = 0;
                     pads[i].rumble_ns = 0;
+                    pads[i].rumble_bad = 0;
                     pads[i].motion = pads[i].motion_on = 0;
                 }
             int32_t ids[32];
@@ -362,6 +364,7 @@ static void pads_poll(void) {
                 pads[slot].id = hos_sdl_pad_id(gc);
                 pads[slot].rumble_lo = pads[slot].rumble_hi = 0;
                 pads[slot].rumble_ns = 0;
+                pads[slot].rumble_bad = 0;
                 hd_open(slot, gc);
                 pads[slot].motion = hos_sdl_pad_has_sensor(gc, HOS_SDL_SENSOR_GYRO) && hos_sdl_pad_has_sensor(gc, HOS_SDL_SENSOR_ACCEL);
                 pads[slot].motion_on = 0;
@@ -467,7 +470,11 @@ static void pads_poll(void) {
             }
             if (hd_poll(i, side, now)) continue;
             if (rumble_due(lo, hi, pads[i].rumble_lo, pads[i].rumble_hi, now, pads[i].rumble_ns)) {
-                hos_sdl_pad_rumble(gc, lo, hi, lo || hi ? 1000 : 0);
+                const int took = hos_sdl_pad_rumble(gc, lo, hi, lo || hi ? 1000 : 0);
+                pads[i].rumble_bad = (uint8_t)!took;
+                if (!took && (lo || hi) && !pads[i].rumble_lo && !pads[i].rumble_hi)
+                    hos_log("hid: \"%s\" did not take its motor rumble (%s): XInput takes over if it can",
+                            hos_sdl_pad_name(gc), hos_sdl_error());
                 pads[i].rumble_lo = lo;
                 pads[i].rumble_hi = hi;
                 pads[i].rumble_ns = now;
@@ -565,6 +572,20 @@ void hos_sdl_rumble(float low, float high) {
     if (high > 1) high = 1;
     InterlockedExchange(&rumble_low, (LONG)(low * 65535));
     InterlockedExchange(&rumble_high, (LONG)(high * 65535));
+}
+
+/* The motors' strengths the Rumble strength row makes of the game's latest values (0..65535): the SDL pads' poll uses
+   them, and nn_hid.c's XInput fallback when SDL has no controller. */
+void hos_sdl_rumble_motors(uint16_t out[2]) {
+    int rx_option(int id, int otherwise);
+    rumble_strength((uint16_t)rumble_low, (uint16_t)rumble_high, rx_option(9, 100), out);
+}
+
+/* Whether an SDL pad refused its motor rumble, so nn_hid.c's XInput fallback should send it instead. */
+int hos_sdl_rumble_failed(void) {
+    for (int i = 0; i < MAX_PADS; i++)
+        if (pads[i].gc && pads[i].rumble_bad) return 1;
+    return 0;
 }
 
 /* The game's own vibration value for one side (0 left, 1 right; {amp_low, freq_low, amp_high, freq_high}), for the

@@ -11,12 +11,16 @@ Each face:
   prefix   the glyph names' prefix in that font
   icons    each pad input's glyph name after the prefix ("/name": the whole name); an input left out keeps the game's icon. No
            Guide: the makers' logos are their trademarks, every face keeps the game's Home icon.
+  art      the pad input whose icon is each of A B X Y's own letter (a, b, x, y), where the controls would otherwise
+           choose the icon by position: the letter stays the button's wherever it is bound. Omitted: the icon of the pad
+           input bound to the button (the PlayStation's shapes; the Switch's own icons follow its buttons).
   drawing  the controller in the pause menu's controls page (System), drawn at the build like the game's Pro Controller
            (nx2/prompt_draw.py): (Kenney font, its controller glyph: the body; None, None: the Steam Deck's own shape) and each
            control (kind, centre x, y in the body's box 0..1, size: a fraction of the body's width, or (w, h) for a "pad" or
            "screen", the pad input whose label it shows, None: none): "stick", "dpad" (the Pro's own, scaled), "face", "small" (a
            disc with the label; none: a blank button), "pad" (a touchpad), "screen". The build makes the page's tinted copy and
-           the shadow from it. None: the game's Pro Controller with this face's labels on its face buttons.
+           the shadow from it. None: the game's Pro Controller with this face's labels on its face buttons. A face with `art`
+           names a letter (a, b, x, y) for a face button where that letter's icon goes, whatever the control's input.
   parts    where each pad input is in the picture, for the page's leader lines (picture pixels): (x, y, r), a stick's centre (its
            line ends on it), a button's centre and radius (its line ends just off the edge it comes from), a shoulder's top
            edge (r 0). The four face buttons are framed. Not a pad input's: boxes the lines keep off (x0, y0, x1, y1: a
@@ -51,11 +55,12 @@ FACES = {
         font="kenney_input_xbox_series.otf", prefix="xbox_",
         drawing=("kenney_input_xbox_series.otf", "controller_xboxseries", [
             ("stick", .215, .262, .158, "lstick"), ("dpad", .345, .530, .160, None), ("stick", .640, .495, .158, "rstick"),
-            ("face", .700, .275, .080, "west"), ("face", .775, .375, .080, "south"), ("face", .775, .175, .080, "north"),
-            ("face", .850, .275, .080, "east"), ("small", .498, .120, .090, "guide"), ("small", .420, .275, .052, "back"),
+            ("face", .700, .275, .080, "y"), ("face", .775, .375, .080, "b"), ("face", .775, .175, .080, "x"),
+            ("face", .850, .275, .080, "a"), ("small", .498, .120, .090, "guide"), ("small", .420, .275, .052, "back"),
             ("small", .576, .275, .052, "start"), ("small", .498, .355, .044, None)]),
         parts=_parts(1156, ((343, 210, 43), (696, 344, 43)), (451, 364, 44, 16), ((809, 160), (746, 218), (871, 218), (809, 275), 31),
                      (513, 218, 19), (578, 129, 34), ((330, 59), (470, 57)), share=(558, 243, 598, 283)),
+        art=dict(a="south", b="east", x="west", y="north"),
         icons=dict(_DPAD, south="button_a", east="button_b", west="button_x", north="button_y", back="button_view",
                    start="button_menu", lshoulder="lb", rshoulder="rb", ltrigger="lt", rtrigger="rt", lstick="ls", rstick="rs")),
     "ps4": dict(

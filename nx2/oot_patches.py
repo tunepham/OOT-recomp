@@ -194,13 +194,21 @@ def patch_mouse_camera(source):
 # 0x8064720c derives a heading from Link's movement and eases yaw (+0x1a4) through f_80642410 at 0x806475e4. Skip only
 # the movement path, restoring x25's parameter base as that path does, and join the other yaw paths at 0x80645ad8.
 # State 4's stick, state 2's explicit recenter and authored heading overrides stay intact; pitch and collision follow.
+# This used to be behind the removed "Disable camera centering" switch. The behavior is now unconditional: after ZL
+# recenters the view, the camera keeps that heading instead of easing back to Link's movement.
 CAM_FOLLOW_ANCHOR = "L_8064720c:;\nif (!c->z) { goto L_806492c4; }\n"
 CAM_FOLLOW_JOIN = "L_80645ad8:;"
-CAM_FOLLOW_HOOK = ("    if (hos_disable_camera_centering()) { c->x[25] = c->x[26]; goto L_80645ad8; }"
-                   "   /* (nx2/oot_patches.py: disable camera centering) */\n")
+CAM_FOLLOW_HOOK = ("    c->x[25] = c->x[26]; goto L_80645ad8;"
+                   "   /* (nx2/oot_patches.py: the camera keeps the heading a recenter gave it) */\n")
+# (a lift made by the old patcher: it called the removed runtime symbol, so a cached file with it must be cleaned even if
+# the new hook is already there)
+CAM_FOLLOW_OLD = ("    if (hos_disable_camera_centering()) { c->x[25] = c->x[26]; goto L_80645ad8; }"
+                  "   /* (nx2/oot_patches.py: disable camera centering) */\n")
+CAM_FOLLOW_OLD_EXTERN = "extern int hos_disable_camera_centering(void);\n"
 
 
-def patch_camera_centering(source):
+def patch_camera_follow(source):
+    source = source.replace(CAM_FOLLOW_OLD_EXTERN, "")
     start = source.find(CAM_HEAD)
     if start < 0:
         return None
@@ -208,13 +216,13 @@ def patch_camera_centering(source):
     if end < 0:
         return None
     body = source[start:end]
+    body = body.replace(CAM_FOLLOW_OLD, "", 1)
     if body.count(CAM_FOLLOW_ANCHOR) != 1 or body.count(CAM_FOLLOW_JOIN) != 1:
         return None
     if CAM_FOLLOW_HOOK in body:
-        return source
+        return source[:start] + body + source[end:]
     body = body.replace(CAM_FOLLOW_ANCHOR, CAM_FOLLOW_ANCHOR + CAM_FOLLOW_HOOK, 1)
-    return (source[:start] + body + source[end:]).replace(
-        '#include "a64.h"\n', '#include "a64.h"\nextern int hos_disable_camera_centering(void);\n', 1)
+    return source[:start] + body + source[end:]
 
 
 MENU_FOCUS_HEAD = "void f_802ed660(Ctx *__restrict A64_NOESC c) {\n"
@@ -728,11 +736,11 @@ def patch_file(s, name, protect_hearts=False):
         out = mouse
         counts["mouse camera"] += 1
         lines.append("oot_patches: native mouse camera in " + name)
-    center = patch_camera_centering(out) if protect_hearts else None
-    if center is not None:
-        out = center
-        counts["disable camera centering"] += 1
-        lines.append("oot_patches: disable camera centering switch in " + name)
+    follow = patch_camera_follow(out) if protect_hearts else None
+    if follow is not None:
+        out = follow
+        counts["camera follow"] += 1
+        lines.append("oot_patches: the camera keeps the heading a recenter gave it in " + name)
     speed = patch_cct_speed(out) if protect_hearts else None
     if speed is not None:
         if speed[0] != out:
@@ -798,7 +806,6 @@ def report(paths, counts, protect_hearts=False):
         done["player flight rotation"] = 0
         done["free camera"] = 0
         done["mouse camera"] = 0
-        done["disable camera centering"] = 0
         done["scene format"] = 0
     total = collections.Counter()
     for c in counts:

@@ -196,6 +196,17 @@ int hos_mods_romfs(const char *rel, char *out, size_t cap) {
     return 1;
 }
 
+/* prompts.c: the mod file for this exact RomFS path, before the prompts' replacements */
+int hos_mods_file(const char *rel, char *out, size_t cap) {
+    char key[MAX_PATH];
+    snprintf(key, sizeof key, "%s", rel);
+    lower_slash(key);
+    const Entry *e = table_n ? find(key) : NULL;
+    if (!e || e->is_dir) return 0;
+    snprintf(out, cap, "%s", e->host);
+    return 1;
+}
+
 /* prompts.c: the mod file (out) whose key (lower case, '/') starts with prefix and ends with suffix, 1 with one */
 int hos_mods_find(const char *prefix, const char *suffix, char *out, size_t cap) {
     const size_t pn = strlen(prefix), sn = strlen(suffix);

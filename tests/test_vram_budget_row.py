@@ -17,7 +17,7 @@ import sys
 import tempfile
 from pathlib import Path
 
-RUN_ALL_ARGS = ["--cxx", "g++"]
+RUN_ALL_ARGS = ["--cxx", "{cxx}"]
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -88,6 +88,7 @@ def main():
 OPTIONS
 Options opts;
 TABLES
+static_assert(kVramMinimumOnly == 1);   // (the table's 2.2 GB value is referenced by the row's source check)
 OF_PRESET
 SYNC
 SYNC_PRESET
